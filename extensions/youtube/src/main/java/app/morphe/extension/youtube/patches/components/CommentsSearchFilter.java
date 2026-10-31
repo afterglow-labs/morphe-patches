@@ -89,6 +89,7 @@ public final class CommentsSearchFilter extends Filter {
     private static final List<String> COMMENTS_PANEL_IDS = List.of(
             "comment-item-section",
             "engagement-panel-comments-section",
+            "post-comments",
             "shorts-comments-panel"
     );
 
@@ -560,7 +561,7 @@ public final class CommentsSearchFilter extends Filter {
                         updateSearchButtonIcon(searchButton);
                         if (!reloadPanelList(searchButton)) {
                             // Such as only quotes, which are not a search.
-                            Utils.showToastLong(str(!isSearching()
+                            Utils.showSnackbarLong(str(!isSearching()
                                     ? "morphe_search_comments_cleared"
                                     : "morphe_search_comments_applied"));
                         }
@@ -571,7 +572,7 @@ public final class CommentsSearchFilter extends Filter {
                         setSearch("");
                         updateSearchButtonIcon(searchButton);
                         if (!reloadPanelList(searchButton)) {
-                            Utils.showToastLong(str("morphe_search_comments_cleared"));
+                            Utils.showSnackbarLong(str("morphe_search_comments_cleared"));
                         }
                     },
                     true

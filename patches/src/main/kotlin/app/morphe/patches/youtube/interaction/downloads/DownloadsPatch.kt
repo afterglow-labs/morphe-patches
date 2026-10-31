@@ -24,6 +24,7 @@ import app.morphe.patches.shared.misc.fix.proto.parseByteArrayWithRegistryMethod
 import app.morphe.patches.shared.misc.fix.proto.protoDefaultInstanceFingerprint
 import app.morphe.patches.shared.misc.proto.hookElement
 import app.morphe.patches.shared.misc.settings.preference.ListPreference
+import app.morphe.patches.shared.misc.settings.preference.NonInteractivePreference
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference
 import app.morphe.patches.shared.misc.settings.preference.PreferenceScreenPreference.Sorting
 import app.morphe.patches.shared.misc.settings.preference.SwitchPreference
@@ -44,7 +45,6 @@ import app.morphe.util.copyResources
 import app.morphe.util.setExtensionIsPatchIncluded
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
-import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
@@ -62,14 +62,20 @@ private val downloadsResourcePatch = resourcePatch {
                 sorting = Sorting.UNSORTED,
                 preferences = setOf(
                     ListPreference("morphe_download_mode"),
+                    SwitchPreference("morphe_shorts_download_flyout_button", summary = true),
+                    NonInteractivePreference(
+                        "morphe_export_download_folder",
+                        summaryKey = null,
+                        tag = "app.morphe.extension.youtube.settings.preference.ExportFolderPreference",
+                        selectable = true
+                    ),
                     SwitchPreference("morphe_external_downloader_overlay_button", summary = true),
                     TextPreference(
                         "morphe_external_downloader_name",
                         tag = "app.morphe.extension.shared.settings.preference.ExternalDownloaderPreference",
                     ),
                     SwitchPreference("morphe_external_downloader_quick_menu", summary = true),
-                    SwitchPreference("morphe_external_downloader_mark_watched", summary = true),
-                    SwitchPreference("morphe_shorts_download_flyout_button", summary = true)
+                    SwitchPreference("morphe_external_downloader_mark_watched", summary = true)
                 )
             )
         )
@@ -104,6 +110,9 @@ private const val EXTENSION_SPOOF_CLASS = "Lapp/morphe/extension/shared/spoof/Sp
 private const val EXTENSION_SHORTS_DOWNLOAD_BUTTON =
     "Lapp/morphe/extension/youtube/videoplayer/ShortsDownloadButton;"
 
+private const val EXTENSION_EXPORT_DOWNLOAD_BUTTON =
+    "Lapp/morphe/extension/youtube/videoplayer/ExportDownloadButton;"
+
 private const val EXTENSION_BUTTON = "Lapp/morphe/extension/youtube/videoplayer/ExternalDownloadButton;"
 
 private const val GET_GENERATED_REGISTRY =
@@ -113,14 +122,14 @@ private const val GET_GENERATED_REGISTRY =
  * @return The default instance field of a proto message, which the message is parsed with.
  */
 private fun BytecodePatchContext.protoDefaultInstance(messageType: String) =
-    protoDefaultInstanceFingerprint(messageType).instructionMatches.first().getFieldAccessed()
+    protoDefaultInstanceFingerprint(messageType).instructionMatches.first().fieldReference
 
 @Suppress("unused")
 val downloadsPatch = bytecodePatch(
     name = "Downloads",
     description = "Adds support to download videos with an external downloader app " +
         "using the in-app download button or a video player action button, " +
-        "and adds an option to download videos in-app.",
+        "adds an option to download videos in-app, and exports saved videos to the device.",
 ) {
     dependsOn(
         downloadsResourcePatch,
@@ -138,6 +147,7 @@ val downloadsPatch = bytecodePatch(
         initializeTopControl(EXTENSION_BUTTON)
 
         setExtensionIsPatchIncluded(EXTENSION_SHORTS_DOWNLOAD_BUTTON)
+        setExtensionIsPatchIncluded(EXTENSION_EXPORT_DOWNLOAD_BUTTON)
 
         OfflineVideoEndpointFingerprint.method.addInstructionsWithLabels(
             0,
@@ -226,7 +236,7 @@ val downloadsPatch = bytecodePatch(
         // Save the video instead of showing the Premium upsell of the offline upsell endpoint.
         OfflineUpsellResponseFingerprint.let {
             val responseType = it.instructionMatches.first().instruction.getReference<TypeReference>()!!.type
-            val commandField = it.instructionMatches[2].instruction.getReference<FieldReference>()!!
+            val commandField = it.instructionMatches[2].fieldReference
 
             it.method.addInstructionsWithLabels(
                 0,

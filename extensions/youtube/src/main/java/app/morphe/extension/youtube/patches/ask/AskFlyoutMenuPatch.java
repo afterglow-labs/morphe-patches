@@ -417,6 +417,11 @@ public final class AskFlyoutMenuPatch {
      */
     private static void updateMenuItem(String videoId, boolean isLive) {
         try {
+            // The menu closed, or the menu of another video opened. A row created for a closed menu
+            // is counted as a button of the next menu, whose buttons then do not match its rows.
+            if (!videoId.equals(FlyoutUtils.getFlyoutVideoId())) {
+                return;
+            }
             MenuAccess menu = menuRef.get();
             if (menu == null) {
                 return;
@@ -568,12 +573,12 @@ public final class AskFlyoutMenuPatch {
             Utils.runOnMainThread(() -> {
                 if (needsTemplate) {
                     if (panel == null) {
-                        Utils.showToastLong(str("morphe_ask_summarize_unavailable"));
+                        Utils.showSnackbarLong(str("morphe_ask_summarize_unavailable"));
                         return;
                     }
                     AskPanelCommand.saveTemplate(panel);
                     if (!AskPanelCommand.hasTemplate()) {
-                        Utils.showToastLong(str("morphe_ask_summarize_failed"));
+                        Utils.showSnackbarLong(str("morphe_ask_summarize_failed"));
                         return;
                     }
                 }
@@ -633,13 +638,13 @@ public final class AskFlyoutMenuPatch {
             CommandExecutorAccess commandExecutor = commandExecutorRef.get();
             if (commandExecutor == null) {
                 Logger.printDebug(() -> "No command executor");
-                Utils.showToastLong(str("morphe_ask_summarize_failed"));
+                Utils.showSnackbarLong(str("morphe_ask_summarize_failed"));
                 return;
             }
 
             AskPanelCommand.Panel panel = AskPanelCommand.build(videoId);
             if (panel == null) {
-                Utils.showToastLong(str("morphe_ask_summarize_failed"));
+                Utils.showSnackbarLong(str("morphe_ask_summarize_failed"));
                 return;
             }
 
@@ -663,7 +668,7 @@ public final class AskFlyoutMenuPatch {
             AskPanelKeyboard.handleKeyboardInsets(Utils.getActivity());
         } catch (Exception ex) {
             Logger.printException(() -> "showAskPanel failure", ex);
-            Utils.showToastLong(str("morphe_ask_summarize_failed"));
+            Utils.showSnackbarLong(str("morphe_ask_summarize_failed"));
         }
     }
 }
